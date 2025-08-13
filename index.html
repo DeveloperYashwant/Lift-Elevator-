@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lift (Elevator) Simulation </title>
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --shaft-bg: #0b1220;
+      --cab-bg: #9aa4b2;
+      --door: #dfe4ea;
+      --accent: #0d6efd; /* bootstrap primary */
+      --floor-height: 90px; /* height per floor */
+      --cab-width: 120px;
+      --cab-height: 80px;
+    }
+
+    body { background: #0a0f1a; color: #e9eef7; }
+    .panel { background: #101829; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,.35); }
+    .title { letter-spacing: .5px; }
+
+    /* Shaft */
+    .shaft { position: relative; height: calc(var(--floor-height) * 7 + 30px); background: var(--shaft-bg); border-radius: 16px; overflow: hidden; border: 1px solid rgba(255,255,255,.08); }
+    .floor-line { position: absolute; left: 0; right: 0; height: 1px; background: rgba(255,255,255,.1); }
+    .floor-label { position: absolute; left: 8px; font-size: 12px; color: rgba(255,255,255,.6); }
+
+    /* Elevator cab */
+    .cab-wrapper { position: absolute; left: 50%; transform: translateX(-50%); width: var(--cab-width); height: var(--cab-height); bottom: 0; }
+    .cab { position: relative; width: 100%; height: 100%; background: linear-gradient(180deg, #b9c3cf, var(--cab-bg)); border: 2px solid rgba(255,255,255,.3); border-radius: 10px; overflow: hidden; }
+    .door { position: absolute; top: 0; bottom: 0; width: 50%; background: var(--door); transition: transform 650ms ease; }
+    .door.left { left: 0; border-right: 1px solid #c5c9cf; }
+    .door.right { right: 0; border-left: 1px solid #c5c9cf; }
+    .doors-open .door.left { transform: translateX(-100%); }
+    .doors-open .door.right { transform: translateX(100%); }
+
+    .indicator { font-variant-numeric: tabular-nums; }
+
+    .btn-floor { width: 52px; }
+
+    .call-btns .btn { width: 48px; padding: .3rem .4rem; }
+
+    .legend-dot { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:6px; }
+    .legend-up { background: #32d583; }
+    .legend-down { background: #f97066; }
+
+    .muted { color: rgba(233,238,247,.65); }
+  </style>
+</head>
+<body>
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h4 title mb-0">🏙️ Lift (Elevator) Simulation <span class="text-primary">HTML • CSS • JS • Bootstrap</span></h1>
+    <div class="small muted">Floors: 0 to 6 (Ground = 0)</div>
+  </div>
+
+  <div class="row g-4">
+    <!-- Shaft + Outside Calls -->
+    <div class="col-12 col-lg-7">
+      <div class="panel p-3">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <div class="small"><span class="legend-dot legend-up"></span>Up queue &nbsp; <span class="legend-dot legend-down"></span>Down queue</div>
+          <div class="small">Click floor call buttons on the right →</div>
+        </div>
+        <div class="row g-3">
+          <div class="col-9">
+            <div id="shaft" class="shaft rounded position-relative">
+              <!-- floor lines & labels are injected via JS -->
+              <div id="cabWrap" class="cab-wrapper">
+                <div id="cab" class="cab">
+                  <div class="door left"></div>
+                  <div class="door right"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-3">
+            <div class="d-flex flex-column align-items-stretch h-100 justify-content-between" id="outsideCalls">
+              <!-- Outside call buttons per floor (Up/Down) inserted via JS -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Inside Panel -->
+    <div class="col-12 col-lg-5">
+      <div class="panel p-3 h-100">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+          <div>
+            <div class="small text-uppercase muted">Current Floor</div>
+            <div id="currentFloor" class="fs-3 indicator">0</div>
+          </div>
+          <div>
+            <div class="small text-uppercase muted">Direction</div>
+            <div id="direction" class="fs-5">IDLE</div>
+          </div>
+          <div>
+            <div class="small text-uppercase muted">Doors</div>
+            <div id="doors" class="fs-5">CLOSED</div>
+          </div>
+        </div>
+
+        <div class="row g-2 mb-3">
+          <!-- Floor buttons 0..6 -->
+          <div class="col-12">
+            <div class="small text-uppercase muted mb-1">Inside Panel</div>
+            <div id="insideButtons" class="d-flex flex-wrap gap-2"></div>
+          </div>
+        </div>
+
+        <div class="d-flex gap-2 mb-3">
+          <button id="btnOpen" class="btn btn-outline-success">Open</button>
+          <button id="btnClose" class="btn btn-outline-warning">Close</button>
+          <button id="btnStop" class="btn btn-outline-danger">Emergency Stop</button>
+          <button id="btnReset" class="btn btn-outline-light">Reset</button>
+        </div>
+
+        <div class="row g-2">
+          <div class="col-6">
+            <div class="small text-uppercase muted">Up Queue</div>
+            <div id="queueUp" class="form-control form-control-sm bg-dark-subtle"></div>
+          </div>
+          <div class="col-6">
+            <div class="small text-uppercase muted">Down Queue</div>
+            <div id="queueDown" class="form-control form-control-sm bg-dark-subtle"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  // ====== CONFIG ======
+  const FLOORS = 7; // 0..6
+  const FLOOR_HEIGHT = 90; // px per floor (keep in sync with CSS var)
+  const CAB_SPEED_PX = 2; // pixels per tick
+  const TICK_MS = 16; // movement timer
+  const DOOR_DWELL_MS = 1200; // how long doors stay open at a stop
+
+  // ====== STATE ======
+  let currentFloor = 0;
+  let direction = 'idle'; // 'up' | 'down' | 'idle'
+  let moving = false;
+  let doorsOpen = false;
+  let stopRequested = false; // emergency stop
+
+  // queues store floor numbers. Up: ascending, Down: descending
+  const upQueue = new Set();
+  const downQueue = new Set();
+
+  // DOM refs
+  const shaft = document.getElementById('shaft');
+  const cabWrap = document.getElementById('cabWrap');
+  const cab = document.getElementById('cab');
+  const lblFloor = document.getElementById('currentFloor');
+  const lblDir = document.getElementById('direction');
+  const lblDoors = document.getElementById('doors');
+  const qUp = document.getElementById('queueUp');
+  const qDown = document.getElementById('queueDown');
+  const outsideCalls = document.getElementById('outsideCalls');
+  const insideButtons = document.getElementById('insideButtons');
+
+  // ====== BUILD UI (floors, lines, call buttons, inside buttons) ======
+  function buildFloors() {
+    // floor lines & labels
+    for (let f = 0; f < FLOORS; f++) {
+      const y = f * FLOOR_HEIGHT + 15; // +15 top padding
+      const line = document.createElement('div');
+      line.className = 'floor-line';
+      line.style.bottom = `${y}px`;
+      shaft.appendChild(line);
+
+      const label = document.createElement('div');
+      label.className = 'floor-label';
+      label.style.bottom = `${y + 4}px`;
+      label.textContent = `Floor ${f}`;
+      shaft.appendChild(label);
+    }
+
+    // position cab to floor 0 initially
+    setCabPosition(0);
+
+    // build outside call buttons
+    for (let f = FLOORS - 1; f >= 0; f--) {
+      const row = document.createElement('div');
+      row.className = 'd-flex align-items-center justify-content-between';
+
+      const span = document.createElement('span');
+      span.className = 'me-2 small';
+      span.textContent = f;
+      row.appendChild(span);
+
+      const wrap = document.createElement('div');
+      wrap.className = 'call-btns btn-group';
+
+      const up = document.createElement('button');
+      up.className = 'btn btn-sm btn-outline-success';
+      up.textContent = '↑';
+      up.disabled = (f === FLOORS - 1);
+      up.addEventListener('click', () => requestFloor(f, 'up'));
+
+      const down = document.createElement('button');
+      down.className = 'btn btn-sm btn-outline-danger';
+      down.textContent = '↓';
+      down.disabled = (f === 0);
+      down.addEventListener('click', () => requestFloor(f, 'down'));
+
+      wrap.appendChild(up);
+      wrap.appendChild(down);
+      row.appendChild(wrap);
+
+      outsideCalls.appendChild(row);
+    }
+
+    // inside panel buttons 0..6
+    for (let f = 0; f < FLOORS; f++) {
+      const b = document.createElement('button');
+      b.className = 'btn btn-primary btn-floor';
+      b.textContent = f;
+      b.addEventListener('click', () => requestFloor(f));
+      insideButtons.appendChild(b);
+    }
+  }
+
+  // ====== QUEUE MANAGEMENT ======
+  function requestFloor(floor, preferredDir = null) {
+    if (floor === currentFloor && !moving) {
+      // already here — just open doors
+      openDoors();
+      return;
+    }
+
+    if (floor > currentFloor) 
+    {
+      upQueue.add(floor);
+    } 
+    else if (floor < currentFloor)
+    {
+      downQueue.add(floor);
+    } 
+    else 
+    {
+      // same floor but moving — decide based on preferredDir
+      if (preferredDir === 'up') upQueue.add(floor); else if (preferredDir === 'down') downQueue.add(floor);
+    }
+
+    schedule();
+    renderQueues();
+  }
+
+  function schedule() {
+    if (moving || stopRequested) return;
+
+    const hasUp = upQueue.size > 0;
+    const hasDown = downQueue.size > 0;
+
+    if (!hasUp && !hasDown) {
+      setDirection('idle');
+      return;
+    }
+
+    if (direction === 'idle') {
+      // choose nearest request overall
+      const all = [...upQueue, ...downQueue];
+      let nearest = null;
+      let minDist = Infinity;
+      for (const f of all) {
+        const d = Math.abs(f - currentFloor);
+        if (d < minDist) { minDist = d; nearest = f; }
+      }
+      direction = nearest >= currentFloor ? 'up' : 'down';
+    }
+
+    move();
+  }
+
+  function nextStop() 
+  {
+    if (direction === 'up') 
+    {
+      const ups = [...upQueue].sort((a,b) => a - b);
+      for (const f of ups) if (f >= currentFloor) return f;
+      // if nothing ahead, but still have down requests, change direction
+      if (downQueue.size) { direction = 'down'; return nextStop(); }
+      return null;
+    } 
+    else if (direction === 'down')
+    {
+      const downs = [...downQueue].sort((a,b) => b - a);
+      for (const f of downs) if (f <= currentFloor) return f;
+      if (upQueue.size) { direction = 'up'; return nextStop(); }
+      return null;
+    }
+    return null;
+  }
+
+  // ====== MOVEMENT & DOORS ======
+  let timer = null;
+
+  function move() {
+    const stopFloor = nextStop();
+    if (stopFloor == null) { setDirection('idle'); return; }
+
+    moving = true;
+    setDirection(direction); // update label
+
+    const targetY = floorToY(stopFloor);
+    timer && clearInterval(timer);
+    timer = setInterval(() => {
+      if (stopRequested) {
+        clearInterval(timer);
+        moving = false;
+        setDirection('idle');
+        return;
+      }
+
+      const y = parseInt(getComputedStyle(cabWrap).bottom, 10);
+      const dy = targetY - y;
+      if (Math.abs(dy) <= CAB_SPEED_PX) {
+        // arrived at floor
+        setCabBottom(targetY);
+        currentFloor = stopFloor;
+        updateIndicators();
+        clearInterval(timer);
+        moving = false;
+
+        // remove from proper queue
+        if (direction === 'up') upQueue.delete(stopFloor); else if (direction === 'down') downQueue.delete(stopFloor);
+        renderQueues();
+
+        // doors
+        openDoors();
+        setTimeout(() => {
+          closeDoors();
+          // continue to next
+          if (upQueue.size || downQueue.size) schedule(); else setDirection('idle');
+        }, DOOR_DWELL_MS);
+      } else {
+        setCabBottom(y + Math.sign(dy) * CAB_SPEED_PX);
+        // update floor display when crossing midpoint between floors
+        const approxFloor = Math.round(y / FLOOR_HEIGHT);
+        if (approxFloor !== currentFloor) {
+          currentFloor = approxFloor;
+          updateIndicators();
+        }
+      }
+    }, TICK_MS);
+  }
+
+  function openDoors() {
+    if (doorsOpen) return;
+    doorsOpen = true;
+    cab.classList.add('doors-open');
+    lblDoors.textContent = 'OPEN';
+  }
+
+  function closeDoors() {
+    if (!doorsOpen) return;
+    doorsOpen = false;
+    cab.classList.remove('doors-open');
+    lblDoors.textContent = 'CLOSED';
+  }
+
+  function setDirection(dir) {
+    direction = dir;
+    lblDir.textContent = dir.toUpperCase();
+  }
+
+  // ====== POSITION HELPERS ======
+  function floorToY(floor) { return floor * FLOOR_HEIGHT; }
+  function setCabBottom(px) { cabWrap.style.bottom = px + 'px'; }
+  function setCabPosition(floor) { setCabBottom(floorToY(floor)); }
+
+  function updateIndicators() {
+    lblFloor.textContent = currentFloor;
+  }
+
+  function renderQueues() {
+    qUp.textContent = [...upQueue].sort((a,b)=>a-b).join(', ') || '-';
+    qDown.textContent = [...downQueue].sort((a,b)=>b-a).join(', ') || '-';
+  }
+
+  // ====== CONTROLS ======
+  document.getElementById('btnOpen').addEventListener('click', openDoors);
+  document.getElementById('btnClose').addEventListener('click', closeDoors);
+  document.getElementById('btnStop').addEventListener('click', () => {
+    stopRequested = true;
+    setDirection('idle');
+  });
+  document.getElementById('btnReset').addEventListener('click', () => {
+    stopRequested = false;
+    upQueue.clear();
+    downQueue.clear();
+    renderQueues();
+    closeDoors();
+    if (timer) clearInterval(timer);
+    moving = false;
+    setCabPosition(0);
+    currentFloor = 0;
+    updateIndicators();
+    setDirection('idle');
+  });
+
+  // kick-off
+  buildFloors();
+  updateIndicators();
+  renderQueues();
+</script>
+</body>
+</html>
