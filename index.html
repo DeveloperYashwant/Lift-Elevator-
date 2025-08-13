@@ -412,106 +412,39 @@
   renderQueues();
 
 
-         document.addEventListener('keydown', (event) => {
-            const keyPressed = event.key.toUpperCase();
-            const keyElement = document.querySelector(`.key[data-key="${keyPressed}"]`);
-            if (keyElement && !keyElement.classList.contains('active')) {
-                const note = keyElement.getAttribute('data-note');
-                const color = keyElement.getAttribute('data-color');
-                playSound(note);
-                changeBackground(color);
-                keyElement.classList.add('active');
-            }
-        });
-
-        document.addEventListener('keyup', (event) => {
-            const keyPressed = event.key.toUpperCase();
-            const keyElement = document.querySelector(`.key[data-key="${keyPressed}"]`);
-            if (keyElement) {
-                keyElement.classList.remove('active');
-            }
-        });
-
-        function playSound(note) {
-            const oscillator = audioContext.createOscillator();
-            const gainNode = audioContext.createGain();
-            
-            oscillator.frequency.setValueAtTime(noteFrequencies[note], audioContext.currentTime);
-            oscillator.type = 'sine';
-            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-            
-            oscillator.connect(gainNode);
-            gainNode.connect(audioContext.destination);
-            
-            oscillator.start();
-            oscillator.stop(audioContext.currentTime + 0.5);
-        }
-
-        function changeBackground(color) {
-            body.style.background = `linear-gradient(45deg, ${color}, #000000)`;
-        }
-
-     document.addEventListener("keydown", function (event) {
-    if (
-        event.key === "F12" || 
-        event.key === "F11" || 
-        event.key === "F5" ||
-        (event.ctrlKey && event.shiftKey && (event.key === "I" || event.key === "J" || event.key === "C")) || 
-        (event.ctrlKey && (event.key === "U" || event.key === "S" || event.key === "P" || event.key === "H" || event.key === "A" || event.key === "F"))
-    ) {
-        showWarning();
-        event.preventDefault();
-    }
-});
-
-// Disable Right-Click
-document.addEventListener("contextmenu", function (event) {
+ document.addEventListener("keydown", e => {
+    // Block all keys except typing keys
+    e.preventDefault();
     showWarning();
-    event.preventDefault();
 });
 
-// Block Page Source Viewing
-document.onkeydown = function (e) {
-    if (e.ctrlKey && e.key === "u") {
-        showWarning();
-        return false;
-    }
-};
+document.addEventListener("contextmenu", e => {
+    e.preventDefault();
+    showWarning();
+});
 
-// Detect Developer Tools Opened
-setInterval(function () {
-    let before = new Date().getTime();
-    debugger;
-    let after = new Date().getTime();
-    if (after - before > 100) {
-        document.write("<h1 style='color:red; text-align:center;'>🚫 Access Denied! Developer Tools are Disabled.</h1>");
-    }
-}, 500);
-
-// Show a Colorful Warning Message
 function showWarning() {
-    let warningBox = document.createElement("div");
-    warningBox.innerHTML = "🚫 Access Denied! All Shortcuts Are Disabled.";
-    warningBox.style.position = "fixed";
-    warningBox.style.top = "50%";
-    warningBox.style.left = "50%";
-    warningBox.style.transform = "translate(-50%, -50%)";
-    warningBox.style.background = "linear-gradient(to right, red, orange, yellow, green, cyan, blue, violet)";
-    warningBox.style.color = "white";
-    warningBox.style.padding = "20px";
-    warningBox.style.fontSize = "20px";
-    warningBox.style.fontWeight = "bold";
-    warningBox.style.borderRadius = "10px";
-    warningBox.style.boxShadow = "0px 0px 10px rgba(0, 0, 0, 0.5)";
-    warningBox.style.zIndex = "9999";
-
-    document.body.appendChild(warningBox);
-
-    setTimeout(() => {
-        warningBox.remove();
-    }, 2000);
+    let w = document.createElement("div");
+    w.textContent = "🚫 Access Denied!";
+    Object.assign(w.style, {
+        position: "fixed",
+        top: "50%",
+        left: "50%",
+        transform: "translate(-50%, -50%)",
+        background: "linear-gradient(to right, red, orange, yellow, green, cyan, blue, violet)",
+        color: "white",
+        padding: "20px",
+        fontSize: "20px",
+        fontWeight: "bold",
+        borderRadius: "10px",
+        zIndex: "9999"
+    });
+    document.body.appendChild(w);
+    setTimeout(() => w.remove(), 1500);
 }
+
 </script>
 </body>
 </html>
+
 
